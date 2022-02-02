@@ -115,6 +115,7 @@ app.post('/webhooks', async (req, res) => {
         await client.sendEmail({
           From: POSTMARK_FROM_ADDRESS,
           To: user.attributes.email,
+          Subject: 'Complete your password reset',
           HtmlBody: html`
             <p>Please reset your password by following this link within 24 hours:</p>
             <a href='${link}'>${link}</a>
