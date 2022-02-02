@@ -109,7 +109,7 @@ app.post('/webhooks', async (req, res) => {
 
       // This points to the route below, which will render a form that submits
       // the password reset fulfillment to Keygen's API.
-      const link = `${SCHEME}://${HOST}/fulfill/${user.id}/${meta.passwordResetToken}`
+      const link = `${SCHEME}://${HOST}/reset/${user.id}/${meta.passwordResetToken}`
 
       try {
         await client.sendEmail({
@@ -138,7 +138,7 @@ app.post('/webhooks', async (req, res) => {
 // It renders an HTML page which sends an API request to Keygen to fulfill the user's
 // password reset request. This could also be a static website -- no server is really
 // needed, it just makes this example easier.
-app.get('/fulfill/:userId/:passwordResetToken', async (req, res) => {
+app.get('/reset/:userId/:passwordResetToken', async (req, res) => {
   const { userId, passwordResetToken } = req.params
   const content = ejs.render(html`
     <!doctype html>
