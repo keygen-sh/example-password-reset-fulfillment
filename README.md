@@ -94,7 +94,7 @@ https://YOUR_NGROK_TUNNEL_ID.ngrok.io/webhooks
 Visit the root of your local server and fill out the password reset request form.
 
 ```
-open http://localhost:8080
+open http://localhost:8080/reset
 ```
 
 Alternatively, you can use `curl` to request a password reset. Be sure to include

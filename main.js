@@ -89,7 +89,6 @@ app.use(bodyParser.json({
   type: ['application/vnd.api+json', 'application/json'],
 }))
 
-app.use(express.static('public'))
 app.use(morgan('combined'))
 
 // The webhook endpoint that listens for password reset requests from Keygen
@@ -140,72 +139,7 @@ app.post('/webhooks', async (req, res) => {
 // needed, it just makes this example easier.
 app.get('/reset/:userId/:passwordResetToken', async (req, res) => {
   const { userId, passwordResetToken } = req.params
-  const content = ejs.render(html`
-    <!doctype html>
-    <html>
-      <head>
-        <title>Finish your password reset</title>
-        <script>
-          window.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('password-reset-fulfillment-form')
-
-            form.addEventListener('submit', event => {
-              event.preventDefault()
-
-              // Get the new password from the form
-              const formData = new FormData(form)
-              const newPassword = formData.get('password')
-
-              // Perform the password reset fulfillment
-              fetch('https://api.keygen.sh/v1/accounts/<%= accountId %>/users/<%= userId %>/actions/reset-password', {
-                method: 'POST',
-                body: JSON.stringify({
-                  meta: {
-                    passwordResetToken: '<%= passwordResetToken %>',
-                    newPassword,
-                  }
-                }),
-              })
-                .then(res => res.json())
-                .then(body => {
-                  const { data, errors } = body
-                  if (errors) {
-                    const [error] = errors
-
-                    alert(
-                      'Your password reset failed: ' +
-                      (error.source?.pointer ?? '') + ' ' + error.detail +
-                      (error.code ? (' (' + error.code + ')') : '')
-                    )
-
-                    throw new Error(error.title + ': ' + error.detail)
-                  }
-
-                  alert('The password for ' + data.attributes.email + ' has been changed!')
-
-                  form.reset()
-                })
-                .catch(e => {
-                  console.error('Failed to fulfill password reset', e)
-                })
-            })
-          })
-        </script>
-      </head>
-      <body>
-        <h1>Finish your password reset for ACME</h1>
-        <form id='password-reset-fulfillment-form'>
-          <label for='password'>
-            New Password
-          </label>
-          <input type='password' name='password'>
-          <button type='submit'>
-            Submit
-          </button>
-        </form>
-      </body>
-    </html>
-  `, {
+  const content = await ejs.renderFile('views/fulfill-password-reset.html.ejs', {
     accountId: KEYGEN_ACCOUNT_ID,
     userId,
     passwordResetToken,
@@ -218,78 +152,18 @@ app.get('/reset/:userId/:passwordResetToken', async (req, res) => {
 // Our password reset route. It renders an HTML page that accepts a user's email
 // address. Once submitted, we send an API request to Keygen that triggers a
 // password reset webhook, which we handle in our /webhooks route.
-app.get('/', async (req, res) => {
-  const content = ejs.render(html`
-    <!doctype html>
-    <html>
-      <head>
-        <title>Request a password reset for ACME</title>
-        <script>
-          window.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('password-reset-request-form')
-
-            form.addEventListener('submit', event => {
-              event.preventDefault()
-
-              // Get the user's email from the form
-              const formData = new FormData(form)
-              const email = formData.get('email')
-
-              // Perform the password reset request
-              fetch('https://api.keygen.sh/v1/accounts/<%= accountId %>/passwords', {
-                method: 'POST',
-                body: JSON.stringify({
-                  meta: {
-                    deliver: false,
-                    email,
-                  }
-                }),
-              })
-                .then(res => res.json().catch(e => null))
-                .then(body => {
-                  if (body?.errors) {
-                    const [error] = errors
-
-                    alert(
-                      'Your password reset request failed: ' +
-                      (error.source?.pointer ?? '') + ' ' + error.detail +
-                      (error.code ? (' (' + error.code + ')') : '')
-                    )
-
-                    throw new Error(error.title + ': ' + error.detail)
-                  }
-
-                  alert('We sent an email to you with instructions on how to reset your password!')
-
-                  form.reset()
-                })
-                .catch(e => {
-                  console.error('Failed to request a password reset', e)
-                })
-            })
-          })
-        </script>
-      </head>
-      <body>
-        <h1>Request a password reset for ACME</h1>
-        <form id='password-reset-request-form'>
-          <label for='email'>
-            Your Email
-          </label>
-          <input type='email' name='email'>
-          <button type='submit'>
-            Submit
-          </button>
-        </form>
-      </body>
-    </html>
-  `, {
+app.get('/reset', async (req, res) => {
+  const content = await ejs.renderFile('views/request-password-reset.html.ejs', {
     accountId: KEYGEN_ACCOUNT_ID,
   })
 
   res.contentType('text/html')
      .send(content)
 })
+
+app.get('/', async (req, res) =>
+  res.redirect('/reset')
+)
 
 const server = app.listen(PORT, 'localhost', () => {
   const { address, port } = server.address()
